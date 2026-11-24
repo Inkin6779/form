@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Submit Game / Report Bug</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; background: #121212; color: #eee; }
+    .hidden { display: none; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input, select, textarea { width: 100%; padding: 8px; box-sizing: border-box; background: #222; color: #fff; border: 1px solid #444; }
+    button { padding: 10px 15px; background: #2ea44f; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <h2>Game Request & Bug Report</h2>
+
+  <!-- STEP 1: MAIN CHOICE -->
+  <div class="form-group">
+    <label>What would you like to do?</label>
+    <select id="submissionType" onchange="handleTypeChange()">
+      <option value="">-- Select an option --</option>
+      <option value="game">Request a Game</option>
+      <option value="bug">Report a Bug</option>
+    </select>
+  </div>
+
+  <!-- STEP 2A: BUG SECTION -->
+  <div id="bugSection" class="hidden">
+    <div class="form-group">
+      <label>Which game has the bug?</label>
+      <input type="text" id="bugGameName" placeholder="e.g., Slope">
+    </div>
+    
+    <div class="form-group">
+      <label>Can you consistently reproduce this bug? (True/False)</label>
+      <select id="bugRepro" onchange="handleBugToggle()">
+        <option value="false">False (It happened randomly)</option>
+        <option value="true">True (I know how to trigger it)</option>
+      </select>
+    </div>
+
+    <!-- Shows only when True -->
+    <div id="bugStepsGroup" class="form-group hidden">
+      <label>Steps to reproduce the bug:</label>
+      <textarea id="bugSteps" rows="3" placeholder="1. Click play... 2. Press spacebar..."></textarea>
+    </div>
+  </div>
+
+  <!-- STEP 2B: GAME REQUEST SECTION -->
+  <div id="gameSection" class="hidden">
+    <div class="form-group">
+      <label>Game Title</label>
+      <input type="text" id="gameTitle" placeholder="e.g., Retro Bowl">
+    </div>
+
+    <div class="form-group">
+      <label>Game Type / Engine</label>
+      <select id="gameEngine" onchange="handleEngineChange()">
+        <option value="HTML5">HTML5 / Web</option>
+        <option value="Flash">Flash (Ruffle)</option>
+        <option value="Emulated">Retro Emulator</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <!-- Shows only when "Other" is selected -->
+    <div id="otherEngineGroup" class="form-group hidden">
+      <label>Please specify the game type/engine:</label>
+      <input type="text" id="otherEngineText" placeholder="e.g., Unity WebGL, DOS, etc.">
+    </div>
+  </div>
+
+  <!-- STEP 3: OPTIONAL GITHUB MENTION & SUBMIT -->
+  <div id="commonFooter" class="hidden">
+    <div class="form-group">
+      <label>Your GitHub Username (Optional - for @mention)</label>
+      <input type="text" id="ghUser" placeholder="Leave blank if you don't have one">
+    </div>
+
+    <button onclick="submitViaGitHub()">Submit via GitHub Account</button>
+    <!-- You can wire a second button here to a Cloudflare Worker for no-account users -->
+  </div>
+
+  <script>
+    function handleTypeChange() {
+      const type = document.getElementById('submissionType').value;
+      document.getElementById('bugSection').classList.toggle('hidden', type !== 'bug');
+      document.getElementById('gameSection').classList.toggle('hidden', type !== 'game');
+      document.getElementById('commonFooter').classList.toggle('hidden', type === '');
+    }
+
+    function handleBugToggle() {
+      const isTrue = document.getElementById('bugRepro').value === 'true';
+      document.getElementById('bugStepsGroup').classList.toggle('hidden', !isTrue);
+    }
+
+    function handleEngineChange() {
+      const engine = document.getElementById('gameEngine').value;
+      document.getElementById('otherEngineGroup').classList.toggle('hidden', engine !== 'Other');
+    }
+
+    function submitViaGitHub() {
+      const repoOwner = "YOUR_GITHUB_USERNAME";
+      const repoName = "YOUR_REPO_NAME";
+      const type = document.getElementById('submissionType').value;
+      const user = document.getElementById('ghUser').value.trim();
+      
+      let title = "";
+      let body = "";
+      let label = "";
+
+      if (type === 'bug') {
+        const game = document.getElementById('bugGameName').value;
+        const repro = document.getElementById('bugRepro').value;
+        const steps = document.getElementById('bugSteps').value;
+        
+        title = `[Bug] ${game}`;
+        label = "bug";
+        body = `**Game:** ${game}\n**Reproducible:** ${repro}\n`;
+        if (repro === 'true') body += `**Steps:**\n${steps}\n`;
+      } else {
+        const game = document.getElementById('gameTitle').value;
+        let engine = document.getElementById('gameEngine').value;
+        if (engine === 'Other') engine = document.getElementById('otherEngineText').value;
+
+        title = `[Game Request] ${game}`;
+        label = "enhancement";
+        body = `**Game:** ${game}\n**Engine/Type:** ${engine}\n`;
+      }
+
+      if (user) {
+        // Strip '@' if they typed it so we don't end up with '@@username'
+        const cleanUser = user.replace(/^@/, '');
+        body += `\n---\n*Submitted by @${cleanUser}*`;
+      }
+
+      const url = `https://github.com/${repoOwner}/${repoName}/issues/new?title=${encodeURIComponent(title)}&body=${encodeURIComponent(body)}&labels=${label}`;
+      window.open(url, '_blank');
+    }
+  </script>
+</body>
+</html>
